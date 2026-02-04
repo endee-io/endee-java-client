@@ -1,0 +1,92 @@
+# ==================== Build Output ====================
+target/
+build/
+out/
+bin/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# ==================== Maven ====================
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ==================== IDE - IntelliJ IDEA ====================
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+atlassian-ide-plugin.xml
+
+# ==================== IDE - Eclipse ====================
+.classpath
+.project
+.settings/
+.metadata/
+*.launch
+.loadpath
+.recommenders/
+.externalToolBuilders/
+
+# ==================== IDE - NetBeans ====================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ==================== IDE - VS Code ====================
+.vscode/
+*.code-workspace
+
+# ==================== OS Files ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ==================== Logs ====================
+*.log
+logs/
+
+# ==================== Environment & Secrets ====================
+.env
+.env.*
+*.env
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# ==================== Test Files (Manual Tests) ====================
+src/test/
+
+# ==================== Temporary Files ====================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+\#*\#
+
+# ==================== Package Manager ====================
+node_modules/
+
+# ==================== Coverage Reports ====================
+coverage/
+*.lcov
+jacoco.exec
