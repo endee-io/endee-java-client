@@ -29,7 +29,7 @@ import java.util.*;
  * </p>
  * 
  * <pre>{@code
- * Endee client = new Endee("api-key:secret:region");
+ * Endee client = new Endee("auth-token");
  *
  * // Create an index
  * CreateIndexOptions options = CreateIndexOptions.builder("my_index", 128)
@@ -65,8 +65,7 @@ public class Endee {
     /**
      * Creates a new Endee client.
      *
-     * @param token the API token (optional, format: "key:secret" or
-     *              "key:secret:region")
+     * @param token the Auth token (optional)
      */
     public Endee(String token) {
         this.token = token;
