@@ -1,6 +1,5 @@
 package io.endee.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.endee.client.exception.EndeeApiException;
 import io.endee.client.exception.EndeeException;
 import io.endee.client.types.*;
@@ -8,8 +7,6 @@ import io.endee.client.util.CryptoUtils;
 import io.endee.client.util.JsonUtils;
 import io.endee.client.util.MessagePackUtils;
 import io.endee.client.util.ValidationUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -46,7 +43,6 @@ import java.util.stream.Collectors;
  * }</pre>
  */
 public class Index {
-    private static final Logger logger = LoggerFactory.getLogger(Index.class);
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
     private static final int MAX_BATCH_SIZE = 1000;
     private static final int MAX_TOP_K = 512;
@@ -56,7 +52,6 @@ public class Index {
     private final String token;
     private final String url;
     private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
 
     private long count;
     private SpaceType spaceType;
@@ -72,7 +67,6 @@ public class Index {
         this.name = name;
         this.token = token;
         this.url = url;
-        this.objectMapper = JsonUtils.getObjectMapper();
 
         this.count = params != null ? params.getTotalElements() : 0;
         this.spaceType = params != null && params.getSpaceType() != null ? params.getSpaceType() : SpaceType.COSINE;
