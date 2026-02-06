@@ -47,7 +47,6 @@ public final class CryptoUtils {
      * Compresses a map to deflated JSON bytes, optionally encrypting with AES.
      *
      * @param data the map to compress
-     * @param key  optional hex key for AES encryption (64 hex chars = 256 bits)
      * @return compressed (and optionally encrypted) bytes
      */
     public static byte[] jsonZip(Map<String, Object> data) {
