@@ -6,11 +6,22 @@
 
     <groupId>io.endee</groupId>
     <artifactId>endee-java-client</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.1.0</version>
     <packaging>jar</packaging>
 
     <name>Endee Java Client</name>
-    <description>Java client library for Endee-DB vector database</description>
+    <description>Java client library for Endee vector database</description>
+
+    <url>https://github.com/EndeeLabs/endee-java-client</url>
+
+    <scm>
+        <connection>scm:git:https://github.com/EndeeLabs/endee-java-client.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:EndeeLabs/endee-java-client.git</developerConnection>
+        <url>https://github.com/EndeeLabs/endee-java-client</url>
+        <tag>HEAD</tag>
+    </scm>
+
+
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -84,6 +95,80 @@
                     <classpathScope>test</classpathScope>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <distributionManagement>
+        <repository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+
+    <developers>
+        <developer>
+            <id>pankaj</id>
+            <name>Pankaj Singh</name>
+            <email>pankaj@endee.io</email>
+            <organization>Endee Labs</organization>
+            <organizationUrl>https://endee.io</organizationUrl>
+        </developer>
+    </developers>
+
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 </project>
