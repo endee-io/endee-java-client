@@ -174,8 +174,8 @@
 
     <distributionManagement>
         <snapshotRepository>
-            <id>central</id>
-            <url>https://central.sonatype.com/api/v1/publisher</url>
+            <id>central-snapshots</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
         </snapshotRepository>
         <repository>
             <id>central</id>
