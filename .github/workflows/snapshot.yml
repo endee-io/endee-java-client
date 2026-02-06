@@ -1,4 +1,4 @@
-name: Publish Snapshot
+name: Dev Build
 
 on:
   push:
@@ -6,11 +6,8 @@ on:
       - dev
 
 jobs:
-  snapshot:
+  build:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout code
@@ -21,27 +18,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          server-id: central
-          server-username: CENTRAL_USERNAME
-          server-password: CENTRAL_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: GPG_PASSPHRASE
+          cache: maven
 
-      - name: Set snapshot version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          if [[ ! "$VERSION" == *"-SNAPSHOT" ]]; then
-            mvn versions:set -DnewVersion="${VERSION}-SNAPSHOT" -DgenerateBackupPoms=false
-          fi
+      - name: Build and test
+        run: mvn -B clean verify
 
-      - name: Build and verify
-        run: mvn -B clean verify -Prelease
-        env:
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Deploy snapshot to Maven Central
-        run: mvn -B clean deploy -Prelease
-        env:
-          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: endee-java-client-dev
+          path: target/*.jar
+          retention-days: 7
