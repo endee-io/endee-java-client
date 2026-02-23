@@ -219,6 +219,12 @@ public class Index {
         if (options.getEf() > MAX_EF) {
             throw new IllegalArgumentException("ef search cannot be greater than " + MAX_EF);
         }
+        if (options.getPrefilterCardinalityThreshold() < 1_000 || options.getPrefilterCardinalityThreshold() > 1_000_000) {
+            throw new IllegalArgumentException("prefilterCardinalityThreshold must be between 1,000 and 1,000,000");
+        }
+        if (options.getFilterBoostPercentage() < 0 || options.getFilterBoostPercentage() > 100) {
+            throw new IllegalArgumentException("filterBoostPercentage must be between 0 and 100");
+        }
 
         boolean hasSparse = options.getSparseIndices() != null && options.getSparseIndices().length > 0
                 && options.getSparseValues() != null && options.getSparseValues().length > 0;
@@ -257,6 +263,11 @@ public class Index {
         if (options.getFilter() != null) {
             data.put("filter", JsonUtils.toJson(options.getFilter()));
         }
+
+        Map<String, Object> filterParams = new HashMap<>();
+        filterParams.put("prefilter_cardinality_threshold", options.getPrefilterCardinalityThreshold());
+        filterParams.put("filter_boost_percentage", options.getFilterBoostPercentage());
+        data.put("filter_params", filterParams);
 
         try {
             String jsonBody = JsonUtils.toJson(data);
