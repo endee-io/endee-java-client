@@ -19,6 +19,8 @@ import java.util.Map;
  * }</pre>
  */
 public class QueryOptions {
+    private static final int DEFAULT_PREFILTER_CARDINALITY_THRESHOLD = 10_000;
+
     private double[] vector;
     private int topK;
     private List<Map<String, Object>> filter;
@@ -26,6 +28,8 @@ public class QueryOptions {
     private boolean includeVectors = false;
     private int[] sparseIndices;
     private double[] sparseValues;
+    private int prefilterCardinalityThreshold = DEFAULT_PREFILTER_CARDINALITY_THRESHOLD;
+    private int filterBoostPercentage = 0;
 
     private QueryOptions() {}
 
@@ -40,6 +44,8 @@ public class QueryOptions {
     public boolean isIncludeVectors() { return includeVectors; }
     public int[] getSparseIndices() { return sparseIndices; }
     public double[] getSparseValues() { return sparseValues; }
+    public int getPrefilterCardinalityThreshold() { return prefilterCardinalityThreshold; }
+    public int getFilterBoostPercentage() { return filterBoostPercentage; }
 
     public static class Builder {
         private final QueryOptions options = new QueryOptions();
@@ -83,6 +89,25 @@ public class QueryOptions {
 
         public Builder sparseValues(double[] sparseValues) {
             options.sparseValues = sparseValues;
+            return this;
+        }
+
+        /**
+         * Sets the prefilter cardinality threshold. When the estimated number of
+         * matching vectors exceeds this value, postfiltering is used instead.
+         * Must be between 1,000 and 1,000,000. Default: 10,000.
+         */
+        public Builder prefilterCardinalityThreshold(int prefilterCardinalityThreshold) {
+            options.prefilterCardinalityThreshold = prefilterCardinalityThreshold;
+            return this;
+        }
+
+        /**
+         * Sets the filter boost percentage (0-100). Higher values bias results
+         * toward filter matches. Default: 0.
+         */
+        public Builder filterBoostPercentage(int filterBoostPercentage) {
+            options.filterBoostPercentage = filterBoostPercentage;
             return this;
         }
 

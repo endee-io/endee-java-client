@@ -25,14 +25,14 @@ Endee is a Java client for a local vector database designed for maximum speed an
 <dependency>
     <groupId>io.endee</groupId>
     <artifactId>endee-java-client</artifactId>
-    <version>1.0.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'io.endee:endee-java-client:1.0.0'
+implementation 'io.endee:endee-java-client:0.1.1'
 ```
 
 ## Quick Start
