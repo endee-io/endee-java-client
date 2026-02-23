@@ -189,12 +189,14 @@ for (QueryResult item : results) {
 
 **Query Parameters:**
 
-| Parameter        | Description                                             | Default  | Max  |
-| ---------------- | ------------------------------------------------------- | -------- | ---- |
-| `vector`         | Query vector (must match index dimension)               | Required | -    |
-| `topK`           | Number of results to return                             | 10       | 512  |
-| `ef`             | Search quality parameter - higher values improve recall | 128      | 1024 |
-| `includeVectors` | Include vector data in results                          | false    | -    |
+| Parameter                        | Description                                             | Default | Max       |
+| -------------------------------- | ------------------------------------------------------- | ------- | --------- |
+| `vector`                         | Query vector (must match index dimension)               | Required | -        |
+| `topK`                           | Number of results to return                             | 10      | 512       |
+| `ef`                             | Search quality parameter - higher values improve recall | 128     | 1024      |
+| `includeVectors`                 | Include vector data in results                          | false   | -         |
+| `prefilterCardinalityThreshold`  | Switch to postfiltering when estimated matches exceed this value | 10,000 | 1,000,000 |
+| `filterBoostPercentage`          | Bias results toward filter matches (0 = disabled)       | 0       | 100       |
 
 ## Filtered Querying
 
@@ -222,6 +224,29 @@ List<QueryResult> results = index.query(
 | `$range` | Numeric range (inclusive) | `Map.of("score", Map.of("$range", List.of(70, 95)))` |
 
 > **Note:** The `$range` operator supports values within **[0 - 999]**. Normalize larger values before upserting.
+
+### Filter Params
+
+Use `prefilterCardinalityThreshold` and `filterBoostPercentage` to fine-tune how filtering interacts with the ANN search:
+
+```java
+List<QueryResult> results = index.query(
+    QueryOptions.builder()
+        .vector(new double[] {0.15, 0.25 /* ... */})
+        .topK(5)
+        .filter(List.of(
+            Map.of("category", Map.of("$eq", "tech"))
+        ))
+        .prefilterCardinalityThreshold(50_000)  // Use postfilter when >50k vectors match
+        .filterBoostPercentage(20)              // Bias 20% toward filter-matching vectors
+        .build()
+);
+```
+
+| Parameter                       | Description                                                                                                                    | Default | Range             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------- | ----------------- |
+| `prefilterCardinalityThreshold` | When the estimated number of vectors matching the filter exceeds this value, postfiltering is used instead of prefiltering.    | 10,000  | 1,000–1,000,000   |
+| `filterBoostPercentage`         | Percentage by which filter-matching vectors are boosted during scoring. Set to `0` to disable. Higher values favor filtered results. | 0   | 0–100             |
 
 ## Hybrid Search
 
@@ -525,12 +550,14 @@ CreateIndexOptions.builder(String name, int dimension)
 ```java
 QueryOptions.builder()
     .vector(double[])                        // Required for dense search
-    .topK(int)                               // Required
-    .ef(int)                                 // Default: 128
+    .topK(int)                               // Default: 10, max 512
+    .ef(int)                                 // Default: 128, max 1024
     .filter(List<Map<String, Object>>)       // Optional
     .includeVectors(boolean)                 // Default: false
     .sparseIndices(int[])                    // Optional, for hybrid search
     .sparseValues(double[])                  // Optional, for hybrid search
+    .prefilterCardinalityThreshold(int)      // Default: 10000, range 1000–1000000
+    .filterBoostPercentage(int)              // Default: 0, range 0–100
     .build()
 ```
 
