@@ -34,7 +34,7 @@ import java.util.*;
  * // Create an index
  * CreateIndexOptions options = CreateIndexOptions.builder("my_index", 128)
  *         .spaceType(SpaceType.COSINE)
- *         .precision(Precision.INT8D)
+ *         .precision(Precision.INT8)
  *         .build();
  * client.createIndex(options);
  *
