@@ -71,7 +71,7 @@ public class Index {
         this.count = params != null ? params.getTotalElements() : 0;
         this.spaceType = params != null && params.getSpaceType() != null ? params.getSpaceType() : SpaceType.COSINE;
         this.dimension = params != null ? params.getDimension() : 0;
-        this.precision = params != null && params.getPrecision() != null ? params.getPrecision() : Precision.INT8D;
+        this.precision = params != null && params.getPrecision() != null ? params.getPrecision() : Precision.INT8;
         this.m = params != null ? params.getM() : 16;
         this.sparseDimension = params != null && params.getSparseDimension() != null ? params.getSparseDimension() : 0;
 

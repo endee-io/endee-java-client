@@ -77,7 +77,7 @@ import io.endee.client.types.SpaceType;
 
 CreateIndexOptions options = CreateIndexOptions.builder("my_vectors", 384)
     .spaceType(SpaceType.COSINE)
-    .precision(Precision.INT8D)
+    .precision(Precision.INT8)
     .build();
 
 client.createIndex(options);
@@ -92,7 +92,7 @@ client.createIndex(options);
 | `spaceType` | Distance metric - `COSINE`, `L2`, or `IP` (inner product)                    | `COSINE` |
 | `m`         | Graph connectivity - higher values increase recall but use more memory       | 16       |
 | `efCon`     | Construction-time parameter - higher values improve index quality            | 128      |
-| `precision` | Quantization precision                                                       | `INT8D`  |
+| `precision` | Quantization precision                                                       | `INT8`  |
 
 ### Create a Hybrid Index
 
@@ -102,7 +102,7 @@ Hybrid indexes combine dense vector search with sparse vector search. Add the `s
 CreateIndexOptions options = CreateIndexOptions.builder("hybrid_index", 384)
     .sparseDimension(30000)    // Sparse vector dimension (vocabulary size)
     .spaceType(SpaceType.COSINE)
-    .precision(Precision.INT8D)
+    .precision(Precision.INT8)
     .build();
 
 client.createIndex(options);
@@ -189,12 +189,14 @@ for (QueryResult item : results) {
 
 **Query Parameters:**
 
-| Parameter        | Description                                             | Default  | Max  |
-| ---------------- | ------------------------------------------------------- | -------- | ---- |
-| `vector`         | Query vector (must match index dimension)               | Required | -    |
-| `topK`           | Number of results to return                             | 10       | 512  |
-| `ef`             | Search quality parameter - higher values improve recall | 128      | 1024 |
-| `includeVectors` | Include vector data in results                          | false    | -    |
+| Parameter                        | Description                                             | Default | Max       |
+| -------------------------------- | ------------------------------------------------------- | ------- | --------- |
+| `vector`                         | Query vector (must match index dimension)               | Required | -        |
+| `topK`                           | Number of results to return                             | 10      | 512       |
+| `ef`                             | Search quality parameter - higher values improve recall | 128     | 1024      |
+| `includeVectors`                 | Include vector data in results                          | false   | -         |
+| `prefilterCardinalityThreshold`  | Switch to postfiltering when estimated matches exceed this value | 10,000 | 1,000,000 |
+| `filterBoostPercentage`          | Bias results toward filter matches (0 = disabled)       | 0       | 100       |
 
 ## Filtered Querying
 
@@ -222,6 +224,29 @@ List<QueryResult> results = index.query(
 | `$range` | Numeric range (inclusive) | `Map.of("score", Map.of("$range", List.of(70, 95)))` |
 
 > **Note:** The `$range` operator supports values within **[0 - 999]**. Normalize larger values before upserting.
+
+### Filter Params
+
+Use `prefilterCardinalityThreshold` and `filterBoostPercentage` to fine-tune how filtering interacts with the ANN search:
+
+```java
+List<QueryResult> results = index.query(
+    QueryOptions.builder()
+        .vector(new double[] {0.15, 0.25 /* ... */})
+        .topK(5)
+        .filter(List.of(
+            Map.of("category", Map.of("$eq", "tech"))
+        ))
+        .prefilterCardinalityThreshold(50_000)  // Use postfilter when >50k vectors match
+        .filterBoostPercentage(20)              // Bias 20% toward filter-matching vectors
+        .build()
+);
+```
+
+| Parameter                       | Description                                                                                                                    | Default | Range             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------- | ----------------- |
+| `prefilterCardinalityThreshold` | When the estimated number of vectors matching the filter exceeds this value, postfiltering is used instead of prefiltering.    | 10,000  | 1,000–1,000,000   |
+| `filterBoostPercentage`         | Percentage by which filter-matching vectors are boosted during scoring. Set to `0` to disable. Higher values favor filtered results. | 0   | 0–100             |
 
 ## Hybrid Search
 
@@ -340,7 +365,7 @@ IndexDescription info = index.describe();
 System.out.println(info);
 // IndexDescription{name='my_index', spaceType=COSINE, dimension=384,
 //                  sparseDimension=0, isHybrid=false, count=1000,
-//                  precision=INT8D, m=16}
+//                  precision=INT8, m=16}
 ```
 
 ### Check if Index is Hybrid
@@ -357,8 +382,8 @@ Endee supports different quantization precision levels:
 import io.endee.client.types.Precision;
 
 Precision.BINARY    // Binary quantization (1-bit) - smallest storage, fastest search
-Precision.INT8D     // 8-bit integer quantization (default) - balanced performance
-Precision.INT16D    // 16-bit integer quantization - higher precision
+Precision.INT8     // 8-bit integer quantization (default) - balanced performance
+Precision.INT16    // 16-bit integer quantization - higher precision
 Precision.FLOAT16   // 16-bit floating point - good balance
 Precision.FLOAT32   // 32-bit floating point - highest precision
 ```
@@ -368,8 +393,8 @@ Precision.FLOAT32   // 32-bit floating point - highest precision
 | Precision | Use Case                                                                  |
 | --------- | ------------------------------------------------------------------------- |
 | `BINARY`  | Very large datasets where speed and storage are critical                  |
-| `INT8D`   | Recommended for most use cases - good balance of accuracy and performance |
-| `INT16D`  | Better accuracy than INT8D but less storage than FLOAT32                  |
+| `INT8`   | Recommended for most use cases - good balance of accuracy and performance |
+| `INT16`  | Better accuracy than INT8 but less storage than FLOAT32                  |
 | `FLOAT16` | Good compromise between precision and storage for embeddings              |
 | `FLOAT32` | Maximum precision when storage is not a concern                           |
 
@@ -435,7 +460,7 @@ public class EndeeExample {
         // Create a dense index
         CreateIndexOptions createOptions = CreateIndexOptions.builder("documents", 384)
             .spaceType(SpaceType.COSINE)
-            .precision(Precision.INT8D)
+            .precision(Precision.INT8)
             .build();
 
         client.createIndex(createOptions);
@@ -515,7 +540,7 @@ CreateIndexOptions.builder(String name, int dimension)
     .spaceType(SpaceType)        // Default: COSINE
     .m(int)                      // Default: 16
     .efCon(int)                  // Default: 128
-    .precision(Precision)        // Default: INT8D
+    .precision(Precision)        // Default: INT8
     .sparseDimension(Integer)    // Optional, for hybrid indexes
     .build()
 ```
@@ -525,12 +550,14 @@ CreateIndexOptions.builder(String name, int dimension)
 ```java
 QueryOptions.builder()
     .vector(double[])                        // Required for dense search
-    .topK(int)                               // Required
-    .ef(int)                                 // Default: 128
+    .topK(int)                               // Default: 10, max 512
+    .ef(int)                                 // Default: 128, max 1024
     .filter(List<Map<String, Object>>)       // Optional
     .includeVectors(boolean)                 // Default: false
     .sparseIndices(int[])                    // Optional, for hybrid search
     .sparseValues(double[])                  // Optional, for hybrid search
+    .prefilterCardinalityThreshold(int)      // Default: 10000, range 1000–1000000
+    .filterBoostPercentage(int)              // Default: 0, range 0–100
     .build()
 ```
 
