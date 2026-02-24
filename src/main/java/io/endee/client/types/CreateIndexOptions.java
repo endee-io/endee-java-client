@@ -9,7 +9,7 @@ public class CreateIndexOptions {
     private SpaceType spaceType = SpaceType.COSINE;
     private int m = 16;
     private int efCon = 128;
-    private Precision precision = Precision.INT8D;
+    private Precision precision = Precision.INT8;
     private Integer version = null;
     private Integer sparseDimension = null;
 

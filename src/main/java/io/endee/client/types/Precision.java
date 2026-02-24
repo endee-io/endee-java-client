@@ -5,8 +5,8 @@ package io.endee.client.types;
  */
 public enum Precision {
     BINARY("binary"),
-    INT8D("int8d"),
-    INT16D("int16d"),
+    INT8("int8"),
+    INT16("int16"),
     FLOAT32("float32"),
     FLOAT16("float16");
 
