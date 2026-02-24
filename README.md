@@ -77,7 +77,7 @@ import io.endee.client.types.SpaceType;
 
 CreateIndexOptions options = CreateIndexOptions.builder("my_vectors", 384)
     .spaceType(SpaceType.COSINE)
-    .precision(Precision.INT8D)
+    .precision(Precision.INT8)
     .build();
 
 client.createIndex(options);
@@ -92,7 +92,7 @@ client.createIndex(options);
 | `spaceType` | Distance metric - `COSINE`, `L2`, or `IP` (inner product)                    | `COSINE` |
 | `m`         | Graph connectivity - higher values increase recall but use more memory       | 16       |
 | `efCon`     | Construction-time parameter - higher values improve index quality            | 128      |
-| `precision` | Quantization precision                                                       | `INT8D`  |
+| `precision` | Quantization precision                                                       | `INT8`  |
 
 ### Create a Hybrid Index
 
@@ -102,7 +102,7 @@ Hybrid indexes combine dense vector search with sparse vector search. Add the `s
 CreateIndexOptions options = CreateIndexOptions.builder("hybrid_index", 384)
     .sparseDimension(30000)    // Sparse vector dimension (vocabulary size)
     .spaceType(SpaceType.COSINE)
-    .precision(Precision.INT8D)
+    .precision(Precision.INT8)
     .build();
 
 client.createIndex(options);
@@ -365,7 +365,7 @@ IndexDescription info = index.describe();
 System.out.println(info);
 // IndexDescription{name='my_index', spaceType=COSINE, dimension=384,
 //                  sparseDimension=0, isHybrid=false, count=1000,
-//                  precision=INT8D, m=16}
+//                  precision=INT8, m=16}
 ```
 
 ### Check if Index is Hybrid
@@ -382,8 +382,8 @@ Endee supports different quantization precision levels:
 import io.endee.client.types.Precision;
 
 Precision.BINARY    // Binary quantization (1-bit) - smallest storage, fastest search
-Precision.INT8D     // 8-bit integer quantization (default) - balanced performance
-Precision.INT16D    // 16-bit integer quantization - higher precision
+Precision.INT8     // 8-bit integer quantization (default) - balanced performance
+Precision.INT16    // 16-bit integer quantization - higher precision
 Precision.FLOAT16   // 16-bit floating point - good balance
 Precision.FLOAT32   // 32-bit floating point - highest precision
 ```
@@ -393,8 +393,8 @@ Precision.FLOAT32   // 32-bit floating point - highest precision
 | Precision | Use Case                                                                  |
 | --------- | ------------------------------------------------------------------------- |
 | `BINARY`  | Very large datasets where speed and storage are critical                  |
-| `INT8D`   | Recommended for most use cases - good balance of accuracy and performance |
-| `INT16D`  | Better accuracy than INT8D but less storage than FLOAT32                  |
+| `INT8`   | Recommended for most use cases - good balance of accuracy and performance |
+| `INT16`  | Better accuracy than INT8 but less storage than FLOAT32                  |
 | `FLOAT16` | Good compromise between precision and storage for embeddings              |
 | `FLOAT32` | Maximum precision when storage is not a concern                           |
 
@@ -460,7 +460,7 @@ public class EndeeExample {
         // Create a dense index
         CreateIndexOptions createOptions = CreateIndexOptions.builder("documents", 384)
             .spaceType(SpaceType.COSINE)
-            .precision(Precision.INT8D)
+            .precision(Precision.INT8)
             .build();
 
         client.createIndex(createOptions);
@@ -540,7 +540,7 @@ CreateIndexOptions.builder(String name, int dimension)
     .spaceType(SpaceType)        // Default: COSINE
     .m(int)                      // Default: 16
     .efCon(int)                  // Default: 128
-    .precision(Precision)        // Default: INT8D
+    .precision(Precision)        // Default: INT8
     .sparseDimension(Integer)    // Optional, for hybrid indexes
     .build()
 ```
