@@ -3,47 +3,81 @@ package io.endee.client.types;
 import java.util.Arrays;
 import java.util.Map;
 
-/**
- * Result from a query operation.
- */
+/** Result from a query operation. */
 public class QueryResult {
-    private String id;
-    private double similarity;
-    private double distance;
-    private Map<String, Object> meta;
-    private double norm;
-    private Map<String, Object> filter;
-    private double[] vector;
+  private String id;
+  private double similarity;
+  private double distance;
+  private Map<String, Object> meta;
+  private double norm;
+  private Map<String, Object> filter;
+  private double[] vector;
 
-    public QueryResult() {}
+  public QueryResult() {}
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+  public String getId() {
+    return id;
+  }
 
-    public double getSimilarity() { return similarity; }
-    public void setSimilarity(double similarity) { this.similarity = similarity; }
+  public void setId(String id) {
+    this.id = id;
+  }
 
-    public double getDistance() { return distance; }
-    public void setDistance(double distance) { this.distance = distance; }
+  public double getSimilarity() {
+    return similarity;
+  }
 
-    public Map<String, Object> getMeta() { return meta; }
-    public void setMeta(Map<String, Object> meta) { this.meta = meta; }
+  public void setSimilarity(double similarity) {
+    this.similarity = similarity;
+  }
 
-    public double getNorm() { return norm; }
-    public void setNorm(double norm) { this.norm = norm; }
+  public double getDistance() {
+    return distance;
+  }
 
-    public Map<String, Object> getFilter() { return filter; }
-    public void setFilter(Map<String, Object> filter) { this.filter = filter; }
+  public void setDistance(double distance) {
+    this.distance = distance;
+  }
 
-    public double[] getVector() { return vector; }
-    public void setVector(double[] vector) { this.vector = vector; }
+  public Map<String, Object> getMeta() {
+    return meta;
+  }
 
-    @Override
-    public String toString() {
-        String result = "QueryResult{id='" + id + "', similarity=" + similarity + ", distance=" + distance;
-        if (vector != null) {
-            result += ", vector=" + Arrays.toString(vector);
-        }
-        return result + "}";
+  public void setMeta(Map<String, Object> meta) {
+    this.meta = meta;
+  }
+
+  public double getNorm() {
+    return norm;
+  }
+
+  public void setNorm(double norm) {
+    this.norm = norm;
+  }
+
+  public Map<String, Object> getFilter() {
+    return filter;
+  }
+
+  public void setFilter(Map<String, Object> filter) {
+    this.filter = filter;
+  }
+
+  public double[] getVector() {
+    return vector;
+  }
+
+  public void setVector(double[] vector) {
+    this.vector = vector;
+  }
+
+  @Override
+  public String toString() {
+    String result =
+        "QueryResult{id='" + id + "', similarity=" + similarity + ", distance=" + distance;
+    if (vector != null) {
+      result += ", vector=" + Arrays.toString(vector);
     }
+    return result + "}";
+  }
 }
