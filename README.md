@@ -363,9 +363,8 @@ import io.endee.client.types.IndexDescription;
 
 IndexDescription info = index.describe();
 System.out.println(info);
-// IndexDescription{name='my_index', spaceType=COSINE, dimension=384,
-//                  sparseDimension=0, isHybrid=false, count=1000,
-//                  precision=INT16, m=16}
+// {name='my_index', spaceType= COSINE, dimension=384, precision=INT16,
+//  count=1000, isHybrid=false, sparseDimension=0, M=16, efCon=128}
 ```
 
 ### Check if Index is Hybrid
@@ -608,6 +607,23 @@ VectorItem.builder(String id, double[] vector)
 | `count`           | `long`      | Number of vectors                    |
 | `precision`       | `Precision` | Quantization precision               |
 | `m`               | `int`       | Graph connectivity                   |
+| `efCon`           | `int`       | Construction-time quality parameter  |
+
+## Code Formatting
+
+This project uses [Spotless](https://github.com/diffplug/spotless) with [Google Java Format](https://github.com/google/google-java-format) to enforce consistent code style.
+
+**Format all source files:**
+```bash
+mvn spotless:apply
+```
+
+**Check formatting without modifying files:**
+```bash
+mvn spotless:check
+```
+
+Formatting is also checked automatically as part of `mvn verify` — CI will fail if any file is not properly formatted.
 
 ## Dependencies
 
