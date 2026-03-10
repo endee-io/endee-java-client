@@ -342,6 +342,43 @@ public class Index {
   }
 
   /**
+   * Updates the filter fields of existing vectors without re-upserting them.
+   *
+   * @param updates list of filter updates, each containing an id and the new filter object
+   * @return success message
+   */
+  public String updateFilters(List<UpdateFilterParams> updates) {
+    List<String> ids = updates.stream().map(UpdateFilterParams::getId).collect(Collectors.toList());
+    ValidationUtils.validateVectorIds(ids);
+
+    List<Map<String, Object>> payload = new ArrayList<>();
+    for (UpdateFilterParams update : updates) {
+      Map<String, Object> entry = new HashMap<>();
+      entry.put("id", update.getId());
+      entry.put("filter", update.getFilter() != null ? update.getFilter() : Map.of());
+      payload.add(entry);
+    }
+
+    try {
+      String jsonBody = JsonUtils.toJson(Map.of("updates", payload));
+      HttpRequest request = buildPostJsonRequest("/index/" + name + "/filters/update", jsonBody);
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+      if (response.statusCode() != 200) {
+        EndeeApiException.raiseException(response.statusCode(), response.body());
+      }
+
+      return response.body();
+    } catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new EndeeException("Failed to update filters", e);
+    }
+  }
+
+  /**
    * Deletes a vector by ID.
    *
    * @param id the vector ID to delete

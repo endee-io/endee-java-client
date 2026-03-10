@@ -312,6 +312,30 @@ You can also query with:
 - **Sparse only**: Provide only `sparseIndices` and `sparseValues`
 - **Hybrid**: Provide all three for combined results
 
+## Updating Filters
+
+Use `index.updateFilters()` to update the filter fields of existing vectors without re-upserting them.
+
+```java
+import io.endee.client.types.UpdateFilterParams;
+import java.util.List;
+import java.util.Map;
+
+index.updateFilters(List.of(
+    new UpdateFilterParams("vec1", Map.of("category", "ml", "score", 95)),
+    new UpdateFilterParams("vec2", Map.of("category", "science", "score", 80))
+));
+```
+
+**`UpdateFilterParams` Fields:**
+
+| Field    | Required | Description                                        |
+| -------- | -------- | -------------------------------------------------- |
+| `id`     | Yes      | ID of the vector to update                         |
+| `filter` | Yes      | New filter object to replace the existing filter   |
+
+> **Note:** The entire filter object is replaced, not merged.
+
 ## Deletion Methods
 
 ### Delete by ID
@@ -522,9 +546,10 @@ public class EndeeExample {
 
 | Method                        | Parameters | Return Type         | Description                |
 | ----------------------------- | ---------- | ------------------- | -------------------------- |
-| `upsert(List<VectorItem>)`    | `vectors`  | `String`            | Insert or update vectors   |
-| `query(QueryOptions)`         | `options`  | `List<QueryResult>` | Search for similar vectors |
-| `deleteVector(String id)`     | `id`       | `String`            | Delete a vector by ID      |
+| `upsert(List<VectorItem>)`              | `vectors`  | `String`            | Insert or update vectors              |
+| `query(QueryOptions)`                   | `options`  | `List<QueryResult>` | Search for similar vectors            |
+| `updateFilters(List<UpdateFilterParams>)` | `updates`  | `String`            | Update filter fields on existing vectors |
+| `deleteVector(String id)`               | `id`       | `String`            | Delete a vector by ID                 |
 | `deleteWithFilter(List<Map>)` | `filter`   | `String`            | Delete vectors by filter   |
 | `getVector(String id)`        | `id`       | `VectorInfo`        | Get a vector by ID         |
 | `describe()`                  | -          | `IndexDescription`  | Get index metadata         |
