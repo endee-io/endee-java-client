@@ -18,7 +18,7 @@ public final class ValidationUtils {
     if (name == null || name.isEmpty()) {
       return false;
     }
-    if (name.length() >= MAX_INDEX_NAME_LENGTH) {
+    if (name.length() > MAX_INDEX_NAME_LENGTH) {
       return false;
     }
     return INDEX_NAME_PATTERN.matcher(name).matches();

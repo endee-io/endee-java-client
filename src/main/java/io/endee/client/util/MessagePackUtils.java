@@ -14,7 +14,7 @@ public final class MessagePackUtils {
 
   private MessagePackUtils() {}
 
-  /** Packs vector data for upsert operations. */
+  /** Packs vector data for upsert operations using single-precision floats. */
   public static byte[] packVectors(List<Object[]> vectors) {
     try (MessageBufferPacker packer = MessagePack.newDefaultBufferPacker()) {
       packer.packArrayHeader(vectors.size());
@@ -44,17 +44,17 @@ public final class MessagePackUtils {
     // filter (string)
     packer.packString((String) vector[2]);
 
-    // norm (double)
-    packer.packDouble((Double) vector[3]);
+    // norm (single-precision float)
+    packer.packFloat((float) (double) (Double) vector[3]);
 
-    // vector (double[])
+    // vector (single-precision floats)
     double[] vec = (double[]) vector[4];
     packer.packArrayHeader(vec.length);
     for (double v : vec) {
-      packer.packDouble(v);
+      packer.packFloat((float) v);
     }
 
-    // Optional sparse data
+    // sparse data (hybrid only)
     if (vector.length > 5) {
       int[] sparseIndices = (int[]) vector[5];
       packer.packArrayHeader(sparseIndices.length);
@@ -65,7 +65,7 @@ public final class MessagePackUtils {
       double[] sparseValues = (double[]) vector[6];
       packer.packArrayHeader(sparseValues.length);
       for (double val : sparseValues) {
-        packer.packDouble(val);
+        packer.packFloat((float) val);
       }
     }
   }
@@ -106,7 +106,10 @@ public final class MessagePackUtils {
     return results;
   }
 
-  /** Unpacks a single vector from MessagePack bytes. */
+  /**
+   * Unpacks a single vector from MessagePack bytes. Handles both dense (5-element) and hybrid
+   * (7-element) tuples.
+   */
   public static Object[] unpackVector(byte[] data) {
     try (MessageUnpacker unpacker = MessagePack.newDefaultUnpacker(data)) {
       int tupleSize = unpacker.unpackArrayHeader();
@@ -125,19 +128,29 @@ public final class MessagePackUtils {
       }
       tuple[4] = vec;
 
+      // hybrid: sparse_indices + sparse_values
+      if (tupleSize > 5) {
+        int sparseLen = unpacker.unpackArrayHeader();
+        int[] sparseIndices = new int[sparseLen];
+        for (int i = 0; i < sparseLen; i++) {
+          sparseIndices[i] = unpacker.unpackInt();
+        }
+        tuple[5] = sparseIndices;
+
+        int sparseValLen = unpacker.unpackArrayHeader();
+        double[] sparseValues = new double[sparseValLen];
+        for (int i = 0; i < sparseValLen; i++) {
+          sparseValues[i] = unpackNumberAsDouble(unpacker);
+        }
+        tuple[6] = sparseValues;
+      }
+
       return tuple;
     } catch (IOException e) {
       throw new EndeeException("Failed to unpack vector", e);
     }
   }
 
-  /**
-   * Helper function to unpackNumber as double even though it can be integer
-   *
-   * @param unpacker
-   * @return
-   * @throws IOException
-   */
   private static double unpackNumberAsDouble(MessageUnpacker unpacker) throws IOException {
     Value value = unpacker.unpackValue();
 

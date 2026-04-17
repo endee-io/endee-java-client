@@ -9,6 +9,8 @@ public class VectorInfo {
   private Map<String, Object> filter;
   private double norm;
   private double[] vector;
+  private int[] sparseIndices;
+  private double[] sparseValues;
 
   public VectorInfo() {}
 
@@ -52,6 +54,22 @@ public class VectorInfo {
     this.vector = vector;
   }
 
+  public int[] getSparseIndices() {
+    return sparseIndices;
+  }
+
+  public void setSparseIndices(int[] sparseIndices) {
+    this.sparseIndices = sparseIndices;
+  }
+
+  public double[] getSparseValues() {
+    return sparseValues;
+  }
+
+  public void setSparseValues(double[] sparseValues) {
+    this.sparseValues = sparseValues;
+  }
+
   @Override
   public String toString() {
     return "VectorInfo{id='"
@@ -60,6 +78,8 @@ public class VectorInfo {
         + norm
         + ", vectorLength="
         + (vector != null ? vector.length : 0)
+        + ", isHybrid="
+        + (sparseIndices != null)
         + "}";
   }
 }

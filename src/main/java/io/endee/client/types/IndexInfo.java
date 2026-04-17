@@ -10,7 +10,8 @@ public class IndexInfo {
   private int m;
   private long checksum;
   private int version;
-  private Integer sparseDimension;
+  private String sparseModel;
+  private String libToken;
   private int efCon;
 
   public IndexInfo() {}
@@ -79,12 +80,20 @@ public class IndexInfo {
     this.version = version;
   }
 
-  public Integer getSparseDimension() {
-    return sparseDimension;
+  public String getSparseModel() {
+    return sparseModel;
   }
 
-  public void setSparseDimension(Integer sparseDimension) {
-    this.sparseDimension = sparseDimension;
+  public void setSparseModel(String sparseModel) {
+    this.sparseModel = sparseModel;
+  }
+
+  public String getLibToken() {
+    return libToken;
+  }
+
+  public void setLibToken(String libToken) {
+    this.libToken = libToken;
   }
 
   public int getEfCon() {

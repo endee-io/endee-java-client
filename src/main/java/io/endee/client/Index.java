@@ -1,5 +1,7 @@
 package io.endee.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.endee.client.exception.EndeeApiException;
 import io.endee.client.exception.EndeeException;
 import io.endee.client.types.*;
@@ -42,20 +44,23 @@ import java.util.stream.Collectors;
 public class Index {
   private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
   private static final int MAX_BATCH_SIZE = 1000;
-  private static final int MAX_TOP_K = 512;
+  private static final int MAX_TOP_K = 4096;
   private static final int MAX_EF = 1024;
+  private static final int MAX_FILTER_BOOST_PERCENTAGE = 400;
 
   private final String name;
   private final String token;
   private final String url;
   private final HttpClient httpClient;
+  private final ObjectMapper objectMapper;
 
   private long count;
   private SpaceType spaceType;
   private int dimension;
   private Precision precision;
   private int m;
-  private int sparseDimension;
+  private String sparseModel;
+  private String libToken;
   private int efCon;
 
   /** Creates a new Index instance. */
@@ -63,16 +68,17 @@ public class Index {
     this.name = name;
     this.token = token;
     this.url = url;
+    this.objectMapper = new ObjectMapper();
 
     this.count = params != null ? params.getTotalElements() : 0;
     this.spaceType =
         params != null && params.getSpaceType() != null ? params.getSpaceType() : SpaceType.COSINE;
     this.dimension = params != null ? params.getDimension() : 0;
     this.precision =
-        params != null && params.getPrecision() != null ? params.getPrecision() : Precision.INT16;
+        params != null && params.getPrecision() != null ? params.getPrecision() : Precision.INT8;
     this.m = params != null ? params.getM() : 16;
-    this.sparseDimension =
-        params != null && params.getSparseDimension() != null ? params.getSparseDimension() : 0;
+    this.sparseModel = params != null ? params.getSparseModel() : "None";
+    this.libToken = params != null ? params.getLibToken() : null;
     this.efCon = params != null ? params.getEfCon() : 128;
 
     this.httpClient =
@@ -87,9 +93,16 @@ public class Index {
     return name;
   }
 
-  /** Checks if this index supports hybrid (sparse + dense) vectors. */
+  public String getLibToken() {
+    return libToken;
+  }
+
+  /**
+   * Returns {@code true} when this index supports hybrid (sparse + dense) vectors. Determined by
+   * {@code sparse_model != "None"} from the server response.
+   */
   public boolean isHybrid() {
-    return sparseDimension > 0;
+    return sparseModel != null && !"None".equals(sparseModel);
   }
 
   /** Normalizes a vector for cosine similarity. Returns [normalizedVector, norm]. */
@@ -121,13 +134,26 @@ public class Index {
     return new double[][] {normalized, {norm}};
   }
 
+  /** Validates that a vector contains only finite values (no NaN or Inf). */
+  private static void validateVectorValues(double[] vector, String vectorId) {
+    for (double v : vector) {
+      if (Double.isNaN(v) || Double.isInfinite(v)) {
+        throw new IllegalArgumentException(
+            "Vector '" + vectorId + "' contains non-finite value (NaN or Inf)");
+      }
+    }
+  }
+
   /**
    * Upserts vectors into the index.
    *
-   * @param inputArray list of vector items to upsert
+   * @param inputArray list of vector items to upsert (1 – 1,000 items)
    * @return success message
    */
   public String upsert(List<VectorItem> inputArray) {
+    if (inputArray.isEmpty()) {
+      throw new IllegalArgumentException("Must provide at least one vector to upsert");
+    }
     if (inputArray.size() > MAX_BATCH_SIZE) {
       throw new IllegalArgumentException(
           "Cannot insert more than " + MAX_BATCH_SIZE + " vectors at a time");
@@ -142,6 +168,7 @@ public class Index {
     List<Object[]> vectorBatch = new ArrayList<>();
 
     for (VectorItem item : inputArray) {
+      validateVectorValues(item.getVector(), item.getId());
       double[][] result = normalizeVector(item.getVector());
       double[] normalizedVector = result[0];
       double norm = result[1][0];
@@ -154,7 +181,7 @@ public class Index {
 
       if (!isHybrid() && (sparseIndices.length > 0 || sparseValues.length > 0)) {
         throw new IllegalArgumentException(
-            "Cannot insert sparse data into a dense-only index. Create index with sparseDimension > 0 for hybrid support.");
+            "Cannot insert sparse data into a dense-only index. Use sparseModel(\"default\") when creating the index.");
       }
 
       if (isHybrid()) {
@@ -169,16 +196,6 @@ public class Index {
                   + " indices and "
                   + sparseValues.length
                   + " values.");
-        }
-        for (int idx : sparseIndices) {
-          if (idx < 0 || idx >= sparseDimension) {
-            throw new IllegalArgumentException(
-                "Sparse index "
-                    + idx
-                    + " is out of bounds. Must be in range [0,"
-                    + sparseDimension
-                    + ").");
-          }
         }
       }
 
@@ -228,20 +245,27 @@ public class Index {
    * @return list of query results
    */
   public List<QueryResult> query(QueryOptions options) {
-    if (options.getTopK() > MAX_TOP_K || options.getTopK() < 0) {
-      throw new IllegalArgumentException(
-          "top_k cannot be greater than " + MAX_TOP_K + " and less than 0");
+    if (options.getTopK() < 1 || options.getTopK() > MAX_TOP_K) {
+      throw new IllegalArgumentException("top_k must be between 1 and " + MAX_TOP_K);
     }
     if (options.getEf() > MAX_EF) {
-      throw new IllegalArgumentException("ef search cannot be greater than " + MAX_EF);
+      throw new IllegalArgumentException("ef cannot be greater than " + MAX_EF);
     }
     if (options.getPrefilterCardinalityThreshold() < 1_000
         || options.getPrefilterCardinalityThreshold() > 1_000_000) {
       throw new IllegalArgumentException(
           "prefilterCardinalityThreshold must be between 1,000 and 1,000,000");
     }
-    if (options.getFilterBoostPercentage() < 0 || options.getFilterBoostPercentage() > 100) {
-      throw new IllegalArgumentException("filterBoostPercentage must be between 0 and 100");
+    if (options.getFilterBoostPercentage() < 0
+        || options.getFilterBoostPercentage() > MAX_FILTER_BOOST_PERCENTAGE) {
+      throw new IllegalArgumentException(
+          "filterBoostPercentage must be between 0 and " + MAX_FILTER_BOOST_PERCENTAGE);
+    }
+    if (options.getDenseRrfWeight() < 0.0 || options.getDenseRrfWeight() > 1.0) {
+      throw new IllegalArgumentException("denseRrfWeight must be between 0.0 and 1.0");
+    }
+    if (options.getRrfRankConstant() < 1) {
+      throw new IllegalArgumentException("rrfRankConstant must be at least 1");
     }
 
     boolean hasSparse =
@@ -257,8 +281,7 @@ public class Index {
     }
 
     if (hasSparse && !isHybrid()) {
-      throw new IllegalArgumentException(
-          "Cannot perform sparse search on a dense-only index. Create index with sparseDimension > 0 for hybrid support.");
+      throw new IllegalArgumentException("Cannot perform sparse search on a dense-only index.");
     }
 
     if (hasSparse && options.getSparseIndices().length != options.getSparseValues().length) {
@@ -286,9 +309,12 @@ public class Index {
     }
 
     Map<String, Object> filterParams = new HashMap<>();
-    filterParams.put("prefilter_cardinality_threshold", options.getPrefilterCardinalityThreshold());
-    filterParams.put("filter_boost_percentage", options.getFilterBoostPercentage());
+    filterParams.put("prefilter_threshold", options.getPrefilterCardinalityThreshold());
+    filterParams.put("boost_percentage", options.getFilterBoostPercentage());
     data.put("filter_params", filterParams);
+
+    data.put("dense_rrf_weight", options.getDenseRrfWeight());
+    data.put("rrf_rank_constant", options.getRrfRankConstant());
 
     try {
       String jsonBody = JsonUtils.toJson(data);
@@ -318,6 +344,7 @@ public class Index {
         result.setDistance(1 - similarity);
         result.setMeta(meta);
         result.setNorm(normValue);
+        result.setVector(new double[0]);
 
         if (filterStr != null && !filterStr.isEmpty() && !filterStr.equals("{}")) {
           @SuppressWarnings("unchecked")
@@ -345,7 +372,7 @@ public class Index {
    * Updates the filter fields of existing vectors without re-upserting them.
    *
    * @param updates list of filter updates, each containing an id and the new filter object
-   * @return success message
+   * @return server response text
    */
   public String updateFilters(List<UpdateFilterParams> updates) {
     List<String> ids = updates.stream().map(UpdateFilterParams::getId).collect(Collectors.toList());
@@ -382,7 +409,7 @@ public class Index {
    * Deletes a vector by ID.
    *
    * @param id the vector ID to delete
-   * @return success message
+   * @return deletion count message (e.g. {@code "1 rows deleted"})
    */
   public String deleteVector(String id) {
     try {
@@ -394,7 +421,7 @@ public class Index {
         EndeeApiException.raiseException(response.statusCode(), response.body());
       }
 
-      return response.body();
+      return response.body() + " rows deleted";
     } catch (IOException | InterruptedException e) {
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
@@ -435,7 +462,7 @@ public class Index {
    * Gets a vector by ID.
    *
    * @param id the vector ID
-   * @return the vector information
+   * @return the vector information including sparse fields for hybrid indexes
    */
   public VectorInfo getVector(String id) {
     try {
@@ -466,6 +493,11 @@ public class Index {
       info.setNorm((Double) vectorObj[3]);
       info.setVector((double[]) vectorObj[4]);
 
+      if (vectorObj.length > 5) {
+        info.setSparseIndices((int[]) vectorObj[5]);
+        info.setSparseValues((double[]) vectorObj[6]);
+      }
+
       return info;
     } catch (IOException | InterruptedException e) {
       if (e instanceof InterruptedException) {
@@ -476,18 +508,151 @@ public class Index {
   }
 
   /**
-   * Returns a description of this index.
+   * Returns a description of this index without making a network call.
    *
    * @return the index description
    */
   public IndexDescription describe() {
     return new IndexDescription(
-        name, spaceType, dimension, sparseDimension, isHybrid(), count, precision, m, efCon);
+        name, spaceType, dimension, sparseModel, isHybrid(), count, precision, m, efCon);
   }
 
-  // ==================== HTTP Request Helper Methods ====================
+  /**
+   * Triggers an index rebuild with new HNSW parameters.
+   *
+   * @param m HNSW M parameter (bi-directional links per node), must be &gt; 0
+   * @param efCon HNSW ef_construction parameter, must be &gt; 0
+   * @return rebuild status dict with {@code status}, {@code previous_config}, {@code new_config},
+   *     {@code total_vectors}
+   */
+  public Map<String, Object> rebuild(int m, int efCon) {
+    if (m <= 0) {
+      throw new IllegalArgumentException("M must be greater than 0");
+    }
+    if (efCon <= 0) {
+      throw new IllegalArgumentException("ef_con must be greater than 0");
+    }
 
-  /** Builds a POST request with JSON body. */
+    refreshMetadata();
+    if (count == 0) {
+      throw new IllegalStateException("Cannot rebuild an empty index");
+    }
+
+    try {
+      String jsonBody = JsonUtils.toJson(Map.of("M", m, "ef_con", efCon));
+      HttpRequest request = buildPostJsonRequest("/index/" + name + "/rebuild", jsonBody);
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+      if (response.statusCode() != 202) {
+        EndeeApiException.raiseException(response.statusCode(), response.body());
+      }
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> result = objectMapper.readValue(response.body(), Map.class);
+      return result;
+    } catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new EndeeException("Failed to rebuild index", e);
+    }
+  }
+
+  /**
+   * Returns the current rebuild status of this index.
+   *
+   * @return dict with {@code status}, and optionally {@code vectors_processed}, {@code
+   *     total_vectors}, {@code percent_complete}
+   */
+  public Map<String, Object> rebuildStatus() {
+    try {
+      HttpRequest request = buildGetRequest("/index/" + name + "/rebuild/status");
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+      if (response.statusCode() != 200) {
+        EndeeApiException.raiseException(response.statusCode(), response.body());
+      }
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> result = objectMapper.readValue(response.body(), Map.class);
+      return result;
+    } catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new EndeeException("Failed to get rebuild status", e);
+    }
+  }
+
+  /**
+   * Fetches the latest metadata from the server and updates this Index object's fields.
+   *
+   * @return dict with current {@code count}, {@code space_type}, {@code dimension}, {@code
+   *     precision}, {@code M}, {@code ef_con}, {@code sparse_model}, {@code is_hybrid}
+   */
+  public Map<String, Object> refreshMetadata() {
+    try {
+      HttpRequest request = buildGetRequest("/index/" + name + "/info");
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+      if (response.statusCode() != 200) {
+        EndeeApiException.raiseException(response.statusCode(), response.body());
+      }
+
+      JsonNode data = objectMapper.readTree(response.body());
+
+      this.count = data.get("total_elements").asLong();
+      this.spaceType = SpaceType.fromValue(data.get("space_type").asText());
+      this.dimension = data.get("dimension").asInt();
+      this.precision = Precision.fromValue(data.get("precision").asText());
+      this.m = data.get("M").asInt();
+      this.efCon = data.get("ef_con").asInt();
+
+      if (data.has("sparse_model") && !data.get("sparse_model").isNull()) {
+        this.sparseModel = data.get("sparse_model").asText();
+      }
+      if (data.has("lib_token") && !data.get("lib_token").isNull()) {
+        this.libToken = data.get("lib_token").asText();
+      }
+
+      Map<String, Object> result = new HashMap<>();
+      result.put("count", this.count);
+      result.put("space_type", this.spaceType.getValue());
+      result.put("dimension", this.dimension);
+      result.put("precision", this.precision.getValue());
+      result.put("M", this.m);
+      result.put("ef_con", this.efCon);
+      result.put("sparse_model", this.sparseModel);
+      result.put("is_hybrid", isHybrid());
+      return result;
+    } catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new EndeeException("Failed to refresh metadata", e);
+    }
+  }
+
+  // ==================== HTTP Request Helpers ====================
+
+  private HttpRequest buildGetRequest(String path) {
+    HttpRequest.Builder builder =
+        HttpRequest.newBuilder()
+            .uri(URI.create(url + path))
+            .header("Content-Type", "application/json")
+            .timeout(DEFAULT_TIMEOUT)
+            .GET();
+
+    if (token != null && !token.isBlank()) {
+      builder.header("Authorization", token);
+    }
+
+    return builder.build();
+  }
+
   private HttpRequest buildPostJsonRequest(String path, String jsonBody) {
     HttpRequest.Builder builder =
         HttpRequest.newBuilder()
@@ -503,7 +668,6 @@ public class Index {
     return builder.build();
   }
 
-  /** Builds a POST request with MessagePack body. */
   private HttpRequest buildPostMsgpackRequest(String path, byte[] body) {
     HttpRequest.Builder builder =
         HttpRequest.newBuilder()
@@ -519,7 +683,6 @@ public class Index {
     return builder.build();
   }
 
-  /** Builds a DELETE request. */
   private HttpRequest buildDeleteRequest(String path) {
     HttpRequest.Builder builder =
         HttpRequest.newBuilder().uri(URI.create(url + path)).timeout(DEFAULT_TIMEOUT).DELETE();
@@ -531,7 +694,6 @@ public class Index {
     return builder.build();
   }
 
-  /** Builds a DELETE request with JSON body. */
   private HttpRequest buildDeleteJsonRequest(String path, String jsonBody) {
     HttpRequest.Builder builder =
         HttpRequest.newBuilder()
