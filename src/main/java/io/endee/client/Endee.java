@@ -42,7 +42,9 @@ import org.slf4j.LoggerFactory;
 public class Endee {
   private static final Logger logger = LoggerFactory.getLogger(Endee.class);
   private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
-  private static final int MAX_DIMENSION = 10000;
+  private static final int MAX_DIMENSION = 8000;
+  private static final int MIN_DIMENSION = 2;
+  private static final List<String> VALID_SPARSE_MODELS = List.of("default", "endee_bm25");
 
   private String token;
   private String baseUrl;
@@ -56,13 +58,13 @@ public class Endee {
    */
   public Endee() {
     this(null);
-    this.baseUrl = "http://127.0.0.1:8080/api/v1";
   }
 
   /**
    * Creates a new Endee client.
    *
-   * @param token the Auth token (optional)
+   * @param token the Auth token (optional). Format: {@code "account:password"} or {@code
+   *     "account:password:region"}
    */
   public Endee(String token) {
     this.token = token;
@@ -106,18 +108,26 @@ public class Endee {
   public String createIndex(CreateIndexOptions options) {
     if (!ValidationUtils.isValidIndexName(options.getName())) {
       throw new IllegalArgumentException(
-          "Invalid index name. Index name must be alphanumeric and can contain underscores and less than 48 characters");
+          "Invalid index name. Must be alphanumeric with underscores, max 48 characters.");
     }
-    if (options.getDimension() > MAX_DIMENSION) {
-      throw new IllegalArgumentException("Dimension cannot be greater than " + MAX_DIMENSION);
-    }
-    if (options.getSparseDimension() != null && options.getSparseDimension() < 0) {
-      throw new IllegalArgumentException("Sparse dimension cannot be less than 0");
+    if (options.getDimension() < MIN_DIMENSION || options.getDimension() > MAX_DIMENSION) {
+      throw new IllegalArgumentException(
+          "Dimension must be between " + MIN_DIMENSION + " and " + MAX_DIMENSION);
     }
 
     String normalizedSpaceType = options.getSpaceType().getValue().toLowerCase();
     if (!List.of("cosine", "l2", "ip").contains(normalizedSpaceType)) {
       throw new IllegalArgumentException("Invalid space type: " + options.getSpaceType());
+    }
+
+    String sparseModel = options.getSparseModel();
+    if (sparseModel != null) {
+      String normalized = sparseModel.toLowerCase();
+      if (!VALID_SPARSE_MODELS.contains(normalized)) {
+        throw new IllegalArgumentException(
+            "Invalid sparseModel. Must be one of: " + VALID_SPARSE_MODELS);
+      }
+      sparseModel = normalized;
     }
 
     Map<String, Object> data = new HashMap<>();
@@ -129,8 +139,8 @@ public class Endee {
     data.put("checksum", -1);
     data.put("precision", options.getPrecision().getValue());
 
-    if (options.getSparseDimension() != null) {
-      data.put("sparse_dim", options.getSparseDimension());
+    if (sparseModel != null) {
+      data.put("sparse_model", sparseModel);
     }
     if (options.getVersion() != null) {
       data.put("version", options.getVersion());
@@ -158,7 +168,7 @@ public class Endee {
   /**
    * Lists all indexes.
    *
-   * @return list of index information
+   * @return raw JSON string of index information
    * @throws EndeeException if the operation fails
    */
   public String listIndexes() {
@@ -228,14 +238,19 @@ public class Endee {
       indexInfo.setTotalElements(data.get("total_elements").asLong());
       indexInfo.setPrecision(Precision.fromValue(data.get("precision").asText()));
       indexInfo.setM(data.get("M").asInt());
-      indexInfo.setChecksum(data.get("checksum").asLong());
       indexInfo.setEfCon(data.get("ef_con").asInt());
 
+      if (data.has("checksum") && !data.get("checksum").isNull()) {
+        indexInfo.setChecksum(data.get("checksum").asLong());
+      }
       if (data.has("version") && !data.get("version").isNull()) {
         indexInfo.setVersion(data.get("version").asInt());
       }
-      if (data.has("sparse_dim") && !data.get("sparse_dim").isNull()) {
-        indexInfo.setSparseDimension(data.get("sparse_dim").asInt());
+      if (data.has("sparse_model") && !data.get("sparse_model").isNull()) {
+        indexInfo.setSparseModel(data.get("sparse_model").asText());
+      }
+      if (data.has("lib_token") && !data.get("lib_token").isNull()) {
+        indexInfo.setLibToken(data.get("lib_token").asText());
       }
 
       return new Index(name, token, baseUrl, version, indexInfo);

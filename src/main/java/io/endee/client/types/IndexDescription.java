@@ -1,11 +1,11 @@
 package io.endee.client.types;
 
-/** Description of an Endee index. */
+/** Description of an Endee index, returned by {@link io.endee.client.Index#describe()}. */
 public class IndexDescription {
   private final String name;
   private final SpaceType spaceType;
   private final int dimension;
-  private final int sparseDimension;
+  private final String sparseModel;
   private final boolean isHybrid;
   private final long count;
   private final Precision precision;
@@ -16,7 +16,7 @@ public class IndexDescription {
       String name,
       SpaceType spaceType,
       int dimension,
-      int sparseDimension,
+      String sparseModel,
       boolean isHybrid,
       long count,
       Precision precision,
@@ -25,7 +25,7 @@ public class IndexDescription {
     this.name = name;
     this.spaceType = spaceType;
     this.dimension = dimension;
-    this.sparseDimension = sparseDimension;
+    this.sparseModel = sparseModel;
     this.isHybrid = isHybrid;
     this.count = count;
     this.precision = precision;
@@ -45,8 +45,8 @@ public class IndexDescription {
     return dimension;
   }
 
-  public int getSparseDimension() {
-    return sparseDimension;
+  public String getSparseModel() {
+    return sparseModel;
   }
 
   public boolean isHybrid() {
@@ -73,7 +73,7 @@ public class IndexDescription {
   public String toString() {
     return "{name='"
         + name
-        + "', spaceType= "
+        + "', spaceType="
         + spaceType
         + ", dimension="
         + dimension
@@ -83,9 +83,9 @@ public class IndexDescription {
         + count
         + ", isHybrid="
         + isHybrid
-        + ", sparseDimension="
-        + sparseDimension
-        + ", M="
+        + ", sparseModel='"
+        + sparseModel
+        + "', M="
         + m
         + ", efCon="
         + efCon

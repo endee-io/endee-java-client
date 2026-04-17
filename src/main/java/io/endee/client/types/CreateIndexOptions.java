@@ -7,9 +7,9 @@ public class CreateIndexOptions {
   private SpaceType spaceType = SpaceType.COSINE;
   private int m = 16;
   private int efCon = 128;
-  private Precision precision = Precision.INT16;
+  private Precision precision = Precision.INT8;
   private Integer version = null;
-  private Integer sparseDimension = null;
+  private String sparseModel = null;
 
   private CreateIndexOptions(String name, int dimension) {
     this.name = name;
@@ -48,8 +48,8 @@ public class CreateIndexOptions {
     return version;
   }
 
-  public Integer getSparseDimension() {
-    return sparseDimension;
+  public String getSparseModel() {
+    return sparseModel;
   }
 
   public static class Builder {
@@ -84,8 +84,14 @@ public class CreateIndexOptions {
       return this;
     }
 
-    public Builder sparseDimension(Integer sparseDimension) {
-      options.sparseDimension = sparseDimension;
+    /**
+     * Sets the sparse model for hybrid indexing.
+     *
+     * @param sparseModel {@code "default"} for standard sparse search, {@code "endee_bm25"} for
+     *     BM25 scoring. Pass {@code null} for a dense-only index.
+     */
+    public Builder sparseModel(String sparseModel) {
+      options.sparseModel = sparseModel;
       return this;
     }
 

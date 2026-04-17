@@ -93,3 +93,6 @@ jacoco.exec
 
 # AI Tools
 .claude
+
+# specification file
+SPEC.md
